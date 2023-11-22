@@ -34,8 +34,8 @@ def clustering_accuracy(true_labels, clustering, k):
     return best_accuracy, new_clustering
 
 
-def evaluate_model(model, true_labels, n_iter=1_000):
-    clustering = model(n_iter)
+def evaluate_model(model, true_labels):
+    clustering = model.clustering
 
     print(f"norm of P: {torch.norm(model.P)}")
     print(f"norm of Q: {torch.norm(model.Q)}")
@@ -44,20 +44,6 @@ def evaluate_model(model, true_labels, n_iter=1_000):
     best_accuracy, new_clustering = clustering_accuracy(true_labels, clustering, model.k)
     print(f"Best accuracy: {best_accuracy}")
 
-    loss_history = {
-        "objective_function": model.loss_history,
-        "data_fidelity": model.data_fidelity_history,
-        "stability": model.stability_history,
-        "orthogonality": model.orthogonality_history,
-    }
+    return new_clustering, best_accuracy
 
-    return new_clustering, loss_history, best_accuracy
 
-def plot_loss(loss_history):
-    for key, value in loss_history.items():
-        plt.plot(value, label=key)
-
-    plt.legend()
-    plt.grid()
-    plt.title("Loss history")
-    plt.show()

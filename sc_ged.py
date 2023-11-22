@@ -6,6 +6,8 @@ from tqdm import tqdm
 import torch
 import torch.optim as optim
 
+import matplotlib.pyplot as plt
+
 
 def compute_adjacency_matrix(G):
     W = nx.adjacency_matrix(G)
@@ -49,10 +51,14 @@ class SC_GED:
 
         self.Lambda, self.P, self.Q = self._eigen_decomposition()
 
-        self.loss_history = []
-        self.data_fidelity_history = []
-        self.stability_history = []
-        self.orthogonality_history = []
+        self.history = {
+            "loss" : [],
+            "data_fidelity" : [],
+            "stability" : [],
+            "orthogonality" : [],
+        }
+
+        self.clustering = None
 
     def objective_function(self, P, Q):
         P = P.reshape(self.n, self.n)
@@ -69,7 +75,7 @@ class SC_GED:
     def _orthogonality(self, P, Q):
         return 0.5 * self.beta * torch.norm(P @ Q - torch.eye(self.n))
 
-    def __call__(self, n_iter=10_000):
+    def fit(self, n_iter=10_000):
         self._joint_eigen_decomposition(n_iter)
 
         self.U = self.P[:, :self.k]
@@ -78,7 +84,8 @@ class SC_GED:
         clustering = {}
         for i, node in enumerate(self.MLG[0].nodes()):
             clustering[node] = model.labels_[i]
-        return clustering
+        
+        self.clustering = clustering
 
     def _eigen_decomposition(self):
         Lambda = []
@@ -96,6 +103,7 @@ class SC_GED:
     def _joint_eigen_decomposition(self, n_iter):
         P = self.P.flatten().clone().detach().requires_grad_(True)
         Q = self.Q.flatten().clone().detach().requires_grad_(True)
+        # LBFGS optimizer is used to have fast convergence as the matrices are sparse
         optimizer_P = optim.LBFGS([P], max_iter=1, line_search_fn="strong_wolfe")
         optimizer_Q = optim.LBFGS([Q], max_iter=1, line_search_fn="strong_wolfe")
         f_P = lambda P: self.objective_function(P, Q)
@@ -117,10 +125,20 @@ class SC_GED:
             optimizer_P.step(closure_P)
             optimizer_Q.step(closure_Q)
 
-            self.loss_history.append(self.objective_function(P,Q).item())
-            self.data_fidelity_history.append(self._data_fidelity(P.reshape(self.n, self.n),Q.reshape(self.n, self.n)).item())
-            self.stability_history.append(self._stability(P.reshape(self.n, self.n),Q.reshape(self.n, self.n)).item())
-            self.orthogonality_history.append(self._orthogonality(P.reshape(self.n, self.n),Q.reshape(self.n, self.n)).item())
+            self.history["loss"].append(self.objective_function(P,Q).item())
+            self.history["data_fidelity"].append(self._data_fidelity(P.reshape(self.n, self.n),Q.reshape(self.n, self.n)).item())
+            self.history["stability"].append(self._stability(P.reshape(self.n, self.n),Q.reshape(self.n, self.n)).item())
+            self.history["orthogonality"].append(self._orthogonality(P.reshape(self.n, self.n),Q.reshape(self.n, self.n)).item())
             
         self.P = P.detach().reshape(self.n, self.n)
         self.Q = Q.detach().reshape(self.n, self.n)
+
+    def plot_loss(self):
+        for key, value in self.history.items():
+            plt.plot(value, label=key)
+
+        plt.legend()
+        plt.grid()
+        plt.title("Loss history")
+        plt.show()
+
