@@ -26,18 +26,33 @@ def compute_Laplacien(D, W, n, version="rw"):
         I_Mn = torch.eye(n).repeat(M, 1, 1)
         L = I_Mn - torch.einsum('ijk,ikl->ijl', Dinv, W)
     elif version=="sym":
-        # Dinv = torch.diag(1 / torch.sqrt(torch.tensor(D, dtype=torch.float)))
-        # L = Dinv @ (torch.diag(torch.tensor(D, dtype=torch.float)) - W) @ Dinv
-        raise NotImplementedError("version not supported")
+        if len(W)!=len(D):
+            print("Sanity Check failed, check the dimenstion of the input")
+            version = "rw"
+            print("Random Walk Laplacien is returned instead")
+            return compute_Laplacien(D, W, n, version=version)
+        else:
+            M = len(D)
+            L = [torch.pinverse(torch.sqrt(D[i])) @ (D[i] - W[i]) @ torch.pinverse(torch.sqrt(D[i])) for i in range(M)]   
     else:
         raise NotImplementedError("version not supported")
     return L
 
 class SC_GED:
-    def __init__(self, MLG, k=5, most_informative=0, alpha=0.5, beta=10):
+    """
+    Spectral Clustering with Generalized Eigen-Decomposition (SC-GED).
+        - MLG: List of networkx graph objects representing the multi-layer graph.
+        - k: Target number of clusters.
+        - most_informative : Index of the most informative layer.
+        - alpha : parameter for stability .
+        - beta: parameter for orthogonality .
+        - P: matrix containing the set of joint eigenvectors as columns.
+        - Q: enforced to be the inverse matrix of P.
+    """
+    def __init__(self, MLG, k=5, rank=[0], alpha=0.5, beta=10): #changed most_informative by the list rank containing layer indexes in decreasing infomation 
+        
         self.MLG = MLG
-        self.most_informative = most_informative
-
+        self.most_informative = rank[0] 
         self.k = k
         self.n = MLG[0].number_of_nodes()
         self.M = len(MLG)
