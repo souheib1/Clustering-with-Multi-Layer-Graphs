@@ -6,7 +6,7 @@ from random import randint
 from sklearn.cluster import KMeans
 from collections import Counter
 import matplotlib.pyplot as plt
-
+import torch
 
 
 def degree_distribution(G,aff=False):
@@ -59,3 +59,63 @@ def modularity(G, clustering):
         dc = np.sum(degrees)
         modularity = modularity + (lc/m - ((dc*dc)/(4*m*m))) 
     return modularity
+
+def compute_adjacency_matrix(G):
+    W = nx.adjacency_matrix(G)
+    W = torch.tensor(W.toarray(), dtype=torch.float)
+    return W
+
+def compute_degree_matrix(G):
+    D = torch.tensor([G.degree(node) for node in G.nodes()])
+    D = torch.add(D, 1e-4)
+    return D
+
+def compute_Laplacien(D, W, n, version="rw"):
+    if version=="rw":
+        M = len(D)
+        Dinv = torch.stack([torch.diag(1/diag) for diag in D])
+        I_Mn = torch.eye(n).repeat(M, 1, 1)
+        L = I_Mn - torch.einsum('ijk,ikl->ijl', Dinv, W)
+    elif version=="sym":
+        if len(W)!=len(D):
+            print("Sanity Check failed, check the dimenstion of the input")
+            version = "rw"
+            print("Random Walk Laplacien is returned instead")
+            return compute_Laplacien(D, W, n, version=version)
+        else:
+            M = len(D)
+            L = [torch.pinverse(torch.sqrt(D[i])) @ (D[i] - W[i]) @ torch.pinverse(torch.sqrt(D[i])) for i in range(M)]   
+    else:
+        raise NotImplementedError("version not supported")
+    return L
+
+
+def compute_adjacency_matrix(G):
+    W = nx.adjacency_matrix(G)
+    W = torch.tensor(W.toarray(), dtype=torch.float)
+    return W
+
+def compute_degree_matrix_from_adjMatrix(W):
+    """
+    This function enables to extract the degree matrix from the weighted 
+    adjacency matrix W 
+    """
+    n = W.shape[0]
+    D=[]
+    for i in range(n):
+        d=0
+        for j in range(n):
+            if W[i,j]>0: #weights assumed to be positive
+                d+=1
+        D.append(d)
+    D=torch.diag(D)
+    return D
+
+
+def layer_ranks(G):
+    """
+    Returns a list of layer indexes in decreasing infomation order 
+    """
+    l=[]
+    #to be implemented
+    return l
