@@ -1,42 +1,11 @@
 import networkx as nx
 from sklearn.cluster import KMeans
-
 from tqdm import tqdm
-
 import torch
 import torch.optim as optim
-
 import matplotlib.pyplot as plt
 
-
-def compute_adjacency_matrix(G):
-    W = nx.adjacency_matrix(G)
-    W = torch.tensor(W.toarray(), dtype=torch.float)
-    return W
-
-def compute_degree_matrix(G):
-    D = torch.tensor([G.degree(node) for node in G.nodes()])
-    D = torch.add(D, 1e-4)
-    return D
-
-def compute_Laplacien(D, W, n, version="rw"):
-    if version=="rw":
-        M = len(D)
-        Dinv = torch.stack([torch.diag(1/diag) for diag in D])
-        I_Mn = torch.eye(n).repeat(M, 1, 1)
-        L = I_Mn - torch.einsum('ijk,ikl->ijl', Dinv, W)
-    elif version=="sym":
-        if len(W)!=len(D):
-            print("Sanity Check failed, check the dimenstion of the input")
-            version = "rw"
-            print("Random Walk Laplacien is returned instead")
-            return compute_Laplacien(D, W, n, version=version)
-        else:
-            M = len(D)
-            L = [torch.pinverse(torch.sqrt(D[i])) @ (D[i] - W[i]) @ torch.pinverse(torch.sqrt(D[i])) for i in range(M)]   
-    else:
-        raise NotImplementedError("version not supported")
-    return L
+from utils import compute_adjacency_matrix, compute_degree_matrix,compute_Laplacien
 
 class SC_GED:
     """
@@ -49,6 +18,7 @@ class SC_GED:
         - P: matrix containing the set of joint eigenvectors as columns.
         - Q: enforced to be the inverse matrix of P.
     """
+    
     def __init__(self, MLG, k=5, rank=[0], alpha=0.5, beta=10): #changed most_informative by the list rank containing layer indexes in decreasing infomation 
         
         self.MLG = MLG
