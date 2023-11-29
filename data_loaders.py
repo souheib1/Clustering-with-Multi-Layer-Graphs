@@ -180,7 +180,7 @@ def extract_affiliation():
     affiliation = pd.read_csv('datasets/MIT/reality-mining-labels.txt', header=None)[0].tolist()
     return affiliation
 
-def create_MIT():
+def preprocess_MIT():
     friendship = extract_friendship_graph()
     friendship_adj = pd.DataFrame(nx.adjacency_matrix(friendship).todense(), dtype=int)
     friendship_adj.to_csv("datasets/MIT/friendship.txt", header=None, index=None, sep=' ')
@@ -198,26 +198,142 @@ def create_MIT():
     affiliation.to_csv("datasets/MIT/affiliation.txt", header=None, index=None, sep=' ')
 
 
-def load_MIT(process=False):
-    if process:
-        create_MIT()
+def load_MIT(preprocess=False):
+    if preprocess:
+        preprocess_MIT()
     MLG = []
-    friendship_adj = pd.read_csv('datasets/MIT/friendship.txt', header=None, sep=' ')
-    friendship = nx.from_numpy_array(friendship_adj.values)
-    MLG.append(friendship)
-
-    calls_adj = pd.read_csv('datasets/MIT/calls.txt', header=None, sep=' ')
-    calls = nx.from_numpy_array(calls_adj.values)
-    MLG.append(calls)
-
-    proximity_adj = pd.read_csv('datasets/MIT/proximity.txt', header=None, sep=' ')
-    proximity = nx.from_numpy_array(proximity_adj.values)
-    MLG.append(proximity)
-
     layer_labels = ['friendship', 'calls', 'proximity']
+    for layer in layer_labels:
+        adj = pd.read_csv(f'datasets/MIT/{layer}.txt', header=None, sep=' ')
+        g = nx.from_numpy_array(adj.values)
+        MLG.append(g)
 
     true_labels = pd.read_csv('datasets/MIT/affiliation.txt', header=None, sep=' ')[0].tolist()
 
     return MLG, layer_labels, true_labels
 
 
+# Cora Dataset #####################################################
+
+
+
+def extract_informative_words(s):
+    import re
+    import nltk
+    from nltk.corpus import stopwords
+
+    nltk.download('stopwords')
+
+    s = s.lower()
+    s = re.sub(r'[^a-z\s]', '', s)
+
+    words = s.split()
+
+    stop_words = set(stopwords.words('english'))
+    words = [word for word in words if word not in stop_words]
+
+    return words
+
+def extract_name_and_label(s):
+    name = s.split("/")[-1]
+    if len(s.split("/")) > 1:
+        label = s.split("/")[-2]
+    else:
+        label = None
+    return name, label
+
+def extract_paper_info():
+    with open("datasets/Cora/citations.withauthors") as f:
+        lines = f.readlines()
+
+    lines = [line.strip() for line in lines]
+
+    paper_start_indices = [i for i, line in enumerate(lines) if line == "***"]
+    authors_start_indices = [i for i, line in enumerate(lines) if line == "*"]
+
+    papers = {}
+    for i, start in enumerate(paper_start_indices[:-1]):
+        paper_id = int(lines[start+1])
+        name, label = extract_name_and_label(lines[start+2])
+        papers[paper_id] = {
+            "name" : name,
+            "label" : label,
+            "cited" : [int(p) for p in lines[start+3:authors_start_indices[i]]],
+            "authors" : lines[authors_start_indices[i]+1:paper_start_indices[i+1]]
+        }
+
+    with open("datasets/Cora/papers") as f:
+        for line in f:
+            if len(line.strip().split("\t")) <= 2:
+                continue
+            paper_id, name, desc = line.strip().split("\t")
+            paper_id = int(paper_id)
+            if paper_id in papers.keys():
+                desc = line.strip().split("\t")[2]
+                title = desc.split("<title>")[1].split("</title>")[0]
+                title = extract_informative_words(title)
+                papers[paper_id]["title"] = title
+        return papers
+
+def preprocess_authors(papers):
+    from sklearn.metrics.pairwise import cosine_similarity
+    authors = [paper["authors"] for paper in papers.values()]
+    author_to_index = {author:i for i, author_list in enumerate(authors) for author in author_list}
+    num_authors = len(author_to_index)
+    author_vectors = np.zeros((len(papers), num_authors))
+    for i, author_list in enumerate(authors):
+        for author in author_list:
+            author_vectors[i, author_to_index[author]] = 1
+    cosine_sim = cosine_similarity(author_vectors)
+    np.fill_diagonal(cosine_sim, 0)
+    pd.DataFrame(cosine_sim).to_csv("datasets/Cora/authors.txt", header=None, index=None, sep=' ')
+    
+
+
+def preprocess_titles(papers, paper_index_to_id):
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    vectorizer = CountVectorizer()
+    titles = [' '.join(papers[paper_index_to_id[i]]["title"]) for i in range(len(papers))]
+    vectorized_titles = vectorizer.fit_transform(titles)
+    cosine_sim = cosine_similarity(vectorized_titles)
+    np.fill_diagonal(cosine_sim, 0)
+    pd.DataFrame(cosine_sim).to_csv("datasets/Cora/titles.txt", header=None, index=None, sep=' ')    
+
+def preprocess_citations(papers, paper_index_to_id):
+    citation = nx.Graph()
+    for i in range(len(papers)):
+        for paper_id in papers[paper_index_to_id[i]]["cited"]:
+            if paper_id in paper_index_to_id.keys():
+                citation.add_edge(i, paper_index_to_id[paper_id])
+    adjacency_matrix = nx.adjacency_matrix(citation)
+    pd.DataFrame(adjacency_matrix.todense()).to_csv("datasets/Cora/citations.txt", header=None, index=None, sep=' ')
+    
+def preprocess_labels(papers, paper_index_to_id):
+    labels = [papers[paper_index_to_id[i]]["label"] for i in range(len(papers))]
+    pd.DataFrame(labels).to_csv("datasets/Cora/labels.txt", header=None, index=None, sep=' ')
+
+def preprocess_Cora(classes=["Robotics", "NLP", "Data_Mining"]):
+    papers = extract_paper_info()
+    papers = {k:v for k,v in papers.items() if "title" in v.keys() and v["label"] in ["Robotics", "NLP", "Data_Mining"]} 
+    paper_index_to_id = {i:k for i, k in enumerate(papers.keys())}
+
+    preprocess_authors(papers)
+    preprocess_titles(papers, paper_index_to_id)
+    preprocess_citations(papers, paper_index_to_id)
+    preprocess_labels(papers, paper_index_to_id)
+
+
+def load_Cora(preprocess=False):
+    if preprocess:
+        preprocess_Cora()
+    MLG = []
+    layer_labels = ['authors', 'titles', 'citations']
+    for layer in layer_labels:
+        adj = pd.read_csv(f'datasets/Cora/{layer}.txt', header=None, sep=' ')
+        g = nx.from_numpy_array(adj.values)
+        MLG.append(g)
+
+    true_labels = pd.read_csv('datasets/Cora/labels.txt', header=None, sep=' ')[0].tolist()
+
+    return MLG, layer_labels, true_labels
