@@ -4,6 +4,7 @@ from tqdm import tqdm
 import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
+from evaluate import clustering_accuracy
 
 from utils import compute_adjacency_matrix, compute_degree_matrix,compute_Laplacien
 
@@ -126,4 +127,18 @@ class SC_GED:
         plt.grid()
         plt.title("Loss history")
         plt.show()
+
+
+    def evaluate(self, true_labels):
+        clustering = self.clustering
+
+        print(f"norm of P: {torch.norm(self.P)}")
+        print(f"norm of Q: {torch.norm(self.Q)}")
+        print(f"norm of P @ Q - I: {torch.norm(self.P @ self.Q - torch.eye(self.n))}")
+
+        best_accuracy, new_clustering = clustering_accuracy(true_labels, clustering, self.k)
+        print(f"Best accuracy: {best_accuracy}")
+
+        return new_clustering, best_accuracy
+
 

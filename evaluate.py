@@ -34,16 +34,5 @@ def clustering_accuracy(true_labels, clustering, k):
     return best_accuracy, new_clustering
 
 
-def evaluate_model(model, true_labels):
-    clustering = model.clustering
-
-    print(f"norm of P: {torch.norm(model.P)}")
-    print(f"norm of Q: {torch.norm(model.Q)}")
-    print(f"norm of P @ Q - I: {torch.norm(model.P @ model.Q - torch.eye(model.n))}")
-
-    best_accuracy, new_clustering = clustering_accuracy(true_labels, clustering, model.k)
-    print(f"Best accuracy: {best_accuracy}")
-
-    return new_clustering, best_accuracy
 
 

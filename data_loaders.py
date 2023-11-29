@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -113,4 +114,110 @@ def load_AUCS():
     layer_labels = list(table.keys())
 
     return MLG, layer_labels, true_labels
+
+# MIT Dataset #####################################################
+
+    
+
+def extract_friendship_graph():
+    df = pd.read_csv('datasets/MIT/reality-mining-survey.txt', sep='\t')
+    # start with 94 nodes from 0 to 89
+    g = nx.Graph()
+    g.add_nodes_from(range(90))
+    g.add_weighted_edges_from(df[['id1', 'id2', 'close-friends?']].values)
+    return g
+
+def extract_proximity_graph():
+    df = pd.read_csv('datasets/MIT/reality-mining-proximity.txt', sep='\t')
+    df['start'] = pd.to_datetime(df['start'], format='mixed')
+    df['end'] = pd.to_datetime(df['end'], format='mixed')
+
+    df['duration'] = df['end'] - df['start']
+    df['duration'] = df['duration'].dt.total_seconds()
+
+    #  add a column to measure how many 30 mn intervals are in the duration of each proximity event
+    df['duration_30mn'] = df['duration'] / 1800 + 1
+    df['duration_30mn'] = df['duration_30mn'].astype(int)
+
+    df = df[['id1', 'id2', 'duration_30mn']].groupby(['id1', 'id2']).sum().reset_index()
+    df = df.rename(columns={'duration_30mn': 'proximity'})
+
+    g = nx.Graph()
+    g.add_nodes_from(range(90))
+
+    g.add_weighted_edges_from(df[['id1', 'id2', 'proximity']].values)
+    return g
+
+def extract_calls_graph():
+    df = pd.read_csv('datasets/MIT/reality-mining-calls.txt', sep='\t')
+    df = df[df.subjectId != df.otherPartyId]
+    incoming_mask = df['direction'] == 'Incoming'
+    df.loc[incoming_mask, ['subjectId', 'otherPartyId']] = df.loc[incoming_mask, ['otherPartyId', 'subjectId']].values
+    df.loc[incoming_mask, 'direction'] = 'Outgoing'
+    df = df.drop_duplicates(subset=['subjectId', 'otherPartyId', 'direction', 'duration'])
+    df = df.groupby(['subjectId', 'otherPartyId']).count().reset_index()
+    df = df.rename(columns={'duration': 'calls'})
+
+    df['id_pair'] = df.apply(lambda row: tuple(sorted([row['subjectId'], row['otherPartyId']])), axis=1)
+    incoming_mask = df['direction'] == 'incoming'
+
+    df.loc[incoming_mask, ['subjectId', 'otherPartyId']] = df.loc[incoming_mask, ['otherPartyId', 'subjectId']].values
+
+    df.sort_values(by=['id_pair', 'direction'], inplace=True)
+    df.drop_duplicates(subset=['id_pair', 'direction'], keep='first', inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    df = df.groupby(['id_pair']).sum().reset_index()
+
+    df['subjectId'] = df['id_pair'].apply(lambda x: x[0])
+    df['otherPartyId'] = df['id_pair'].apply(lambda x: x[1])
+
+    g = nx.Graph()
+    g.add_nodes_from(range(90))
+    g.add_weighted_edges_from(df[['subjectId', 'otherPartyId', 'calls']].values)
+    return g
+
+def extract_affiliation():
+    affiliation = pd.read_csv('datasets/MIT/reality-mining-labels.txt', header=None)[0].tolist()
+    return affiliation
+
+def create_MIT():
+    friendship = extract_friendship_graph()
+    friendship_adj = pd.DataFrame(nx.adjacency_matrix(friendship).todense(), dtype=int)
+    friendship_adj.to_csv("datasets/MIT/friendship.txt", header=None, index=None, sep=' ')
+
+    calls = extract_calls_graph()
+    calls_adj = pd.DataFrame(nx.adjacency_matrix(calls).todense(), dtype=int)
+    calls_adj.to_csv("datasets/MIT/calls.txt", header=None, index=None, sep=' ')
+
+    proximity = extract_proximity_graph()
+    proximity_adj = pd.DataFrame(nx.adjacency_matrix(proximity).todense(), dtype=int)
+    proximity_adj.to_csv("datasets/MIT/proximity.txt", header=None, index=None, sep=' ')
+
+    affiliation = extract_affiliation()
+    affiliation = pd.DataFrame(affiliation)
+    affiliation.to_csv("datasets/MIT/affiliation.txt", header=None, index=None, sep=' ')
+
+
+def load_MIT(process=False):
+    if process:
+        create_MIT()
+    MLG = []
+    friendship_adj = pd.read_csv('datasets/MIT/friendship.txt', header=None, sep=' ')
+    friendship = nx.from_numpy_array(friendship_adj.values)
+    MLG.append(friendship)
+
+    calls_adj = pd.read_csv('datasets/MIT/calls.txt', header=None, sep=' ')
+    calls = nx.from_numpy_array(calls_adj.values)
+    MLG.append(calls)
+
+    proximity_adj = pd.read_csv('datasets/MIT/proximity.txt', header=None, sep=' ')
+    proximity = nx.from_numpy_array(proximity_adj.values)
+    MLG.append(proximity)
+
+    layer_labels = ['friendship', 'calls', 'proximity']
+
+    true_labels = pd.read_csv('datasets/MIT/affiliation.txt', header=None, sep=' ')[0].tolist()
+
+    return MLG, layer_labels, true_labels
+
 
