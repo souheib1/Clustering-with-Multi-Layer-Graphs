@@ -337,3 +337,26 @@ def load_Cora(preprocess=False):
     true_labels = pd.read_csv('datasets/Cora/labels.txt', header=None, sep=' ')[0].tolist()
 
     return MLG, layer_labels, true_labels
+
+
+# Dataloader #####################################################
+
+class Dataset():
+    def __init__(self, name, **kwargs):
+        if name == "AUCS":
+            MLG, layer_labels, labels = load_AUCS()
+        elif name == "MIT":
+            MLG, layer_labels, labels = load_MIT(**kwargs)
+        elif name == "Cora":
+            MLG, layer_labels, labels = load_Cora(**kwargs)
+        elif name == "UNINet":
+            MLG, layer_labels, labels = load_UNINet(**kwargs)
+        else:
+            raise ValueError(f"Dataset {name} not found")
+        
+        self.MLG = MLG
+        self.layer_labels = layer_labels
+        self.labels = labels
+        
+    def display(self):
+        display_MLG(self.MLG, self.layer_labels)

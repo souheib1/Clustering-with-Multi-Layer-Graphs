@@ -1,38 +1,32 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 import itertools
 
 import torch
 
 
-def accuracy_with_label_mapping(mapping, true_labels, clustering):
+def clustering_accuracy(true_labels, clustering, k):
+    categorical_to_numerical = {label: i for i, label in enumerate(np.unique(true_labels))}
+    numerical_to_categorical = {i: label for label, i in categorical_to_numerical.items()}
+
+    true_labels = [categorical_to_numerical[label] for label in true_labels]
+
     true_labels = np.array(true_labels)
     predicted_labels = np.array(list(clustering.values()))
-    predicted_labels_mapped = np.array([mapping[value] for value in predicted_labels])
-        
-    return np.sum(true_labels == predicted_labels_mapped) / len(true_labels)
+
+    # To match the labels with the clusters we want to maximize the diagonal of the confusion matrix
+    cm = confusion_matrix(predicted_labels, true_labels)
+    cm_argmax = cm.argmax(axis=0)
+    new_clustering = np.array([cm_argmax[i] for i in true_labels])
 
 
-def clustering_accuracy(true_labels, clustering, k):
-    labels_range = list(range(k))
-    all_possible_mappings = [dict(zip(perm, labels_range)) for perm in itertools.permutations(labels_range, k)]
-
-    best_accuracy = 0
-    best_mapping = None
-
-    for mapping in all_possible_mappings:
-        acc = accuracy_with_label_mapping(mapping, true_labels, clustering)
-        if acc > best_accuracy:
-            best_accuracy = acc
-            best_mapping = mapping
+    accuracy = np.sum(true_labels == new_clustering) / len(true_labels)
 
 
     new_clustering = {}
     for node, label in clustering.items():
-        new_clustering[node] = best_mapping[label]
-
-    return best_accuracy, new_clustering
+        new_clustering[node] = numerical_to_categorical[clustering[label]]
 
 
-
-
+    return accuracy, new_clustering

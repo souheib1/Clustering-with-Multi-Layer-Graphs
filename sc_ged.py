@@ -20,10 +20,10 @@ class SC_GED:
         - Q: enforced to be the inverse matrix of P.
     """
     
-    def __init__(self, MLG, k=5, rank=[0], alpha=0.5, beta=10): #changed most_informative by the list rank containing layer indexes in decreasing infomation 
+    def __init__(self, MLG, k=5, most_informative=0, alpha=0.5, beta=10): #changed most_informative by the list rank containing layer indexes in decreasing infomation 
         
         self.MLG = MLG
-        self.most_informative = rank[0] 
+        self.most_informative = most_informative
         self.k = k
         self.n = MLG[0].number_of_nodes()
         self.M = len(MLG)
@@ -75,11 +75,10 @@ class SC_GED:
 
     def _eigen_decomposition(self):
         Lambda = []
-        print("start decomposition")
         _, P = torch.linalg.eigh(self.L[self.most_informative])
         Q = torch.linalg.inv(P)
 
-        for i in tqdm(range(self.M), desc="Eigen Decomposition"):
+        for i in range(self.M):
             eigen_values = torch.linalg.eigvalsh(self.L[i])
             eigen_values.sort()
             Lambda.append(torch.diag(eigen_values))
@@ -129,16 +128,15 @@ class SC_GED:
         plt.show()
 
 
-    def evaluate(self, true_labels):
+    def evaluate(self, true_labels, verbose=False):
+        assert self.clustering is not None, "You must fit the model before evaluating it."
         clustering = self.clustering
-
-        print(f"norm of P: {torch.norm(self.P)}")
-        print(f"norm of Q: {torch.norm(self.Q)}")
-        print(f"norm of P @ Q - I: {torch.norm(self.P @ self.Q - torch.eye(self.n))}")
-
         best_accuracy, new_clustering = clustering_accuracy(true_labels, clustering, self.k)
-        print(f"Best accuracy: {best_accuracy}")
+
+        if verbose:
+            print(f"norm of P: {torch.norm(self.P)}")
+            print(f"norm of Q: {torch.norm(self.Q)}")
+            print(f"norm of P @ Q - I: {torch.norm(self.P @ self.Q - torch.eye(self.n))}")
+            print(f"Best accuracy: {best_accuracy}")
 
         return new_clustering, best_accuracy
-
-
