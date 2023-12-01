@@ -20,8 +20,9 @@ def SC_SR(W, k, _lambda,ranking):
     """
     
     #Sanity check and transform to adjancency matrix if needed 
-    if isinstance(W, nx.Graph): 
-        W = compute_adjacency_matrix(W)
+    if isinstance(W[0], nx.Graph): 
+        W = [compute_adjacency_matrix(G) for G in W]
+        W = torch.stack([torch.tensor(adj_matrix.detach().numpy(), dtype=torch.float32) for adj_matrix in W])
         
     # 1) Input
     M, n = W.size(0), W.size(1)
@@ -35,8 +36,10 @@ def SC_SR(W, k, _lambda,ranking):
     Lrw_1 = torch.pinverse(D_1) @ (D_1 - W_1)
 
     # 4) Compute the first k eigenvectors (u1..uk) of L(1)
-    w, v = torch.eig(Lrw_1, eigenvectors=True)
-    wk_arg = torch.argsort(w[:, 0])[:k]
+    w, v = torch.linalg.eig(Lrw_1)
+    w = w.real
+    v = v.real
+    wk_arg = torch.argsort(w)[:k]
 
     # 5) Let U in Rn×k be the matrix containing (u1..uk) ascolumns
     U = v[:, wk_arg]
