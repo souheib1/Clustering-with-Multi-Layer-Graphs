@@ -101,14 +101,12 @@ def compute_degree_matrix_from_adjMatrix(W):
     adjacency matrix W 
     """
     n = W.shape[0]
-    D=[]
+    D = torch.zeros(n, n, dtype=torch.float32)
+
     for i in range(n):
-        d=0
-        for j in range(n):
-            if W[i,j]>0: #weights assumed to be positive
-                d+=1
-        D.append(d)
-    D=torch.diag(D)
+        d = torch.sum(W[i] > 0)
+        D[i, i] = d
+
     return D
 
 
