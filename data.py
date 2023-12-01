@@ -222,7 +222,8 @@ def extract_informative_words(s):
     import nltk
     from nltk.corpus import stopwords
 
-    nltk.download('stopwords')
+    if not nltk.data.find('corpora/stopwords'):
+        nltk.download('stopwords')
 
     s = s.lower()
     s = re.sub(r'[^a-z\s]', '', s)
@@ -300,12 +301,16 @@ def preprocess_titles(papers, paper_index_to_id):
     np.fill_diagonal(cosine_sim, 0)
     pd.DataFrame(cosine_sim).to_csv("datasets/Cora/titles.txt", header=None, index=None, sep=' ')    
 
-def preprocess_citations(papers, paper_index_to_id):
+def preprocess_citations(papers, paper_index_to_id, paper_id_to_index):
     citation = nx.Graph()
     for i in range(len(papers)):
-        for paper_id in papers[paper_index_to_id[i]]["cited"]:
-            if paper_id in paper_index_to_id.keys():
-                citation.add_edge(i, paper_index_to_id[paper_id])
+        citation.add_node(i)
+
+    for paper_id in papers.keys():
+        for cited_id in papers[paper_id]["cited"]:
+            if cited_id in papers.keys():
+                    citation.add_edge(paper_id_to_index[paper_id], paper_id_to_index[cited_id])
+
     adjacency_matrix = nx.adjacency_matrix(citation)
     pd.DataFrame(adjacency_matrix.todense()).to_csv("datasets/Cora/citations.txt", header=None, index=None, sep=' ')
     
@@ -315,12 +320,14 @@ def preprocess_labels(papers, paper_index_to_id):
 
 def preprocess_Cora(classes=["Robotics", "NLP", "Data_Mining"]):
     papers = extract_paper_info()
-    papers = {k:v for k,v in papers.items() if "title" in v.keys() and v["label"] in ["Robotics", "NLP", "Data_Mining"]} 
+    papers = {k:v for k,v in papers.items() if "title" in v.keys() and v["label"] in ["Robotics", "NLP", "Data_Mining"]}
+
+    paper_id_to_index = {k:i for i, k in enumerate(papers.keys())}
     paper_index_to_id = {i:k for i, k in enumerate(papers.keys())}
 
     preprocess_authors(papers)
     preprocess_titles(papers, paper_index_to_id)
-    preprocess_citations(papers, paper_index_to_id)
+    preprocess_citations(papers, paper_index_to_id, paper_id_to_index)
     preprocess_labels(papers, paper_index_to_id)
 
 
