@@ -4,10 +4,9 @@ from tqdm import tqdm
 import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
-from evaluate import clustering_accuracy
-
+from metrics import purity_score, nmi_score, ri_score
 from utils import compute_adjacency_matrix, compute_degree_matrix,compute_Laplacien
-
+import numpy as np
 class SC_GED:
     """
     Spectral Clustering with Generalized Eigen-Decomposition (SC-GED).
@@ -65,7 +64,7 @@ class SC_GED:
         self._joint_eigen_decomposition(n_iter)
 
         self.U = self.P[:, :self.k]
-        model = KMeans(n_clusters=self.k, random_state=0, n_init=10)
+        model = KMeans(n_clusters=self.k, random_state=0, n_init=100)
         model.fit(self.U)
         clustering = {}
         for i, node in enumerate(self.MLG[0].nodes()):
@@ -89,8 +88,8 @@ class SC_GED:
         P = self.P.flatten().clone().detach().requires_grad_(True)
         Q = self.Q.flatten().clone().detach().requires_grad_(True)
         # LBFGS optimizer is used to have fast convergence as the matrices are sparse
-        optimizer_P = optim.LBFGS([P], max_iter=1, line_search_fn="strong_wolfe")
-        optimizer_Q = optim.LBFGS([Q], max_iter=1, line_search_fn="strong_wolfe")
+        optimizer_P = optim.LBFGS([P], max_iter=10, line_search_fn="strong_wolfe")
+        optimizer_Q = optim.LBFGS([Q], max_iter=10, line_search_fn="strong_wolfe")
         f_P = lambda P: self.objective_function(P, Q)
         f_Q = lambda Q: self.objective_function(P, Q)
 
@@ -130,13 +129,28 @@ class SC_GED:
 
     def evaluate(self, true_labels, verbose=False):
         assert self.clustering is not None, "You must fit the model before evaluating it."
-        clustering = self.clustering
-        best_accuracy, new_clustering = clustering_accuracy(true_labels, clustering, self.k)
+        nodes = sorted(self.clustering.keys(), key=lambda x: int(x[1:]))
+        clustering = {}
+        for i, node in enumerate(nodes):
+            clustering[i] = self.clustering[node]
+
+
+        N = len(true_labels)
+        ground_truth_clustering = {i: true_labels[i] for i in range(N)}
+
+        purity = purity_score(clustering, ground_truth_clustering)
+        nmi = nmi_score(clustering, ground_truth_clustering)
+        ri = ri_score(clustering, ground_truth_clustering)
+
+
 
         if verbose:
             print(f"norm of P: {torch.norm(self.P)}")
             print(f"norm of Q: {torch.norm(self.Q)}")
             print(f"norm of P @ Q - I: {torch.norm(self.P @ self.Q - torch.eye(self.n))}")
-            print(f"Best accuracy: {best_accuracy}")
+            print("Purity: ", purity)
+            print("NMI: ", nmi)
+            print("RI: ", ri)
 
-        return new_clustering, best_accuracy
+
+        return purity, nmi, ri

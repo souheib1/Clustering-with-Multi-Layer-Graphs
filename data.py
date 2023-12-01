@@ -34,17 +34,29 @@ def load_UNINet(file_path):
     return MLG, layer_labels, node_names
 
 
-def display_MLG(MLG, layer_labels):
+def display_MLG(MLG, layer_labels, true_labels=None):
 
     M = len(MLG)
-    
-    fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
 
+
+    if true_labels is not None:
+        color_map = {0: 'red', 1: 'blue', 2: 'green', 3: 'yellow', 4: 'orange', 5: 'purple', 6: 'pink', 7: 'brown'}
+        map_true_labels = {label: i for i, label in enumerate(np.unique(true_labels))}
+        true_labels = [map_true_labels[label] for label in true_labels]
+
+        node_colors = [color_map[true_labels[i]]  if true_labels[i] < len(color_map) else "black" for i in range(len(true_labels))] 
+        kwargs = {'node_color': node_colors}
+    else:
+        kwargs = {}
+
+    fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
     for i, G in enumerate(MLG):
-        nx.draw(G, with_labels=False, node_size=50, node_color='black', edge_color='black', ax=axes[i])
+        nx.draw(G, with_labels=False, node_size=10, edge_color='black', ax=axes[i], **kwargs)
         axes[i].set_title(f"{layer_labels[i]}")
 
     plt.show()
+
+
 
     adjacency_matrices = [nx.adjacency_matrix(G) for G in MLG]
     fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
@@ -243,6 +255,17 @@ def extract_name_and_label(s):
         label = None
     return name, label
 
+def compute_titles_similarity(papers):
+    paper_index_to_id = {i : k for i, k in enumerate(papers.keys())}
+    titles = [' '.join(papers[paper_index_to_id[i]]["title"]) for i in range(len(papers))]
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    vectorizer = CountVectorizer()
+    vectorized_titles = vectorizer.fit_transform(titles)
+    cosine_sim = cosine_similarity(vectorized_titles)
+    np.fill_diagonal(cosine_sim, 0)
+    return cosine_sim, paper_index_to_id
+
 def extract_paper_info():
     with open("datasets/Cora/citations.withauthors") as f:
         lines = f.readlines()
@@ -274,6 +297,9 @@ def extract_paper_info():
                 title = desc.split("<title>")[1].split("</title>")[0]
                 title = extract_informative_words(title)
                 papers[paper_id]["title"] = title
+
+
+        
         return papers
 
 def preprocess_authors(papers):
@@ -291,17 +317,11 @@ def preprocess_authors(papers):
     
 
 
-def preprocess_titles(papers, paper_index_to_id):
-    from sklearn.feature_extraction.text import CountVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    vectorizer = CountVectorizer()
-    titles = [' '.join(papers[paper_index_to_id[i]]["title"]) for i in range(len(papers))]
-    vectorized_titles = vectorizer.fit_transform(titles)
-    cosine_sim = cosine_similarity(vectorized_titles)
-    np.fill_diagonal(cosine_sim, 0)
+def preprocess_titles(papers):
+    cosine_sim, _ = compute_titles_similarity(papers)
     pd.DataFrame(cosine_sim).to_csv("datasets/Cora/titles.txt", header=None, index=None, sep=' ')    
 
-def preprocess_citations(papers, paper_index_to_id, paper_id_to_index):
+def preprocess_citations(papers, paper_id_to_index):
     citation = nx.Graph()
     for i in range(len(papers)):
         citation.add_node(i)
@@ -320,14 +340,37 @@ def preprocess_labels(papers, paper_index_to_id):
 
 def preprocess_Cora(classes=["Robotics", "NLP", "Data_Mining"]):
     papers = extract_paper_info()
-    papers = {k:v for k,v in papers.items() if "title" in v.keys() and v["label"] in ["Robotics", "NLP", "Data_Mining"]}
+    papers = {k:v for k,v in papers.items() if "title" in v.keys() and v["label"] in classes}
+
+
+    # Remove duplicates 
+    cosine_sim, paper_index_to_id = compute_titles_similarity(papers)
+    similar_titles = np.where(cosine_sim > 0.8)
+    duplicates = {}
+    for i, j in zip(similar_titles[0], similar_titles[1]):
+        if j in duplicates.keys():
+            continue
+        else:
+            duplicates[i] = j
+
+    for i, j in duplicates.items():
+        del papers[paper_index_to_id[j]]
+        del paper_index_to_id[j] 
+
+    
+    for paper in papers.values():
+        for cited_id in paper["cited"]:
+            if cited_id in duplicates.values():
+                original = [k for k, v in duplicates.items() if v == cited_id][0]
+                paper["cited"] = [original if c == cited_id else c for c in paper["cited"]]
 
     paper_id_to_index = {k:i for i, k in enumerate(papers.keys())}
     paper_index_to_id = {i:k for i, k in enumerate(papers.keys())}
 
+
+    preprocess_titles(papers)
     preprocess_authors(papers)
-    preprocess_titles(papers, paper_index_to_id)
-    preprocess_citations(papers, paper_index_to_id, paper_id_to_index)
+    preprocess_citations(papers, paper_id_to_index)
     preprocess_labels(papers, paper_index_to_id)
 
 
@@ -350,6 +393,7 @@ def load_Cora(preprocess=False):
 
 class Dataset():
     def __init__(self, name, **kwargs):
+        self.name = name
         if name == "AUCS":
             MLG, layer_labels, labels = load_AUCS()
         elif name == "MIT":
@@ -366,4 +410,7 @@ class Dataset():
         self.labels = labels
         
     def display(self):
-        display_MLG(self.MLG, self.layer_labels)
+        if self.name == "UNINet":
+            display_MLG(self.MLG, self.layer_labels)
+        else:
+            display_MLG(self.MLG, self.layer_labels, self.labels)
