@@ -440,8 +440,8 @@ class Dataset():
         self.layer_labels = layer_labels
         self.labels = labels
         
-    def display(self,node_size=50,markersize=10):
+    def display(self,node_size=50,markersize=10,keep_shape=False):
         if self.name == "UNINet":
-            display_MLG(self.MLG, self.layer_labels, node_size=node_size,markersize=markersize)
+            display_MLG(self.MLG, self.layer_labels, node_size=node_size,markersize=markersize,keep_shape=keep_shape)
         else:
-            display_MLG(self.MLG, self.layer_labels, self.labels, node_size=node_size,markersize=markersize)
+            display_MLG(self.MLG, self.layer_labels, self.labels, node_size=node_size,markersize=markersize,keep_shape=keep_shape)
