@@ -198,6 +198,8 @@ def extract_calls_graph():
 
 def extract_affiliation():
     affiliation = pd.read_csv('datasets/MIT/reality-mining-labels.txt', header=None)[0].tolist()
+    correct_affiliation = {"sloan_2": "sloan", "grad": "mlgrad"}
+    affiliation = [correct_affiliation[a] if a in correct_affiliation.keys() else a for a in affiliation]
     return affiliation
 
 def preprocess_MIT():
@@ -382,13 +384,24 @@ def preprocess_Cora(classes=["Robotics", "NLP", "Data_Mining"]):
     preprocess_labels(papers, paper_index_to_id)
 
 
-def load_Cora(preprocess=False):
+def load_Cora(preprocess=False, extended=True):
     if preprocess:
         preprocess_Cora()
+    if not extended:
+        nodes_per_class = {'Robotics': [40, 0], 'NLP': [30, 0], 'Data_Mining': [20, 0]}
+        nodes_to_keep = []
+        for node, label in enumerate(true_labels):
+            if nodes_per_class[label][1] < nodes_per_class[label][0]:
+                nodes_to_keep.append(node)
+                nodes_per_class[label][1] += 1
+
+
     MLG = []
     layer_labels = ['authors', 'titles', 'citations']
     for layer in layer_labels:
         adj = pd.read_csv(f'datasets/Cora/{layer}.txt', header=None, sep=' ')
+        if not extended:
+            adj = adj.iloc[nodes_to_keep, nodes_to_keep]
         g = nx.from_numpy_array(adj.values)
         MLG.append(g)
 
