@@ -34,13 +34,15 @@ def load_UNINet(file_path):
     return MLG, layer_labels, node_names
 
 
-def display_MLG(MLG, layer_labels, true_labels=None):
+def display_MLG(MLG, layer_labels, true_labels=None,node_size=2,markersize=2):
 
     M = len(MLG)
 
 
     if true_labels is not None:
-        color_map = {0: 'red', 1: 'blue', 2: 'green', 3: 'yellow', 4: 'orange', 5: 'purple', 6: 'pink', 7: 'brown'}
+        #color_map = {0: 'red', 1: 'blue', 2: 'green', 3: 'yellow', 4: 'orange', 5: 'purple', 6: 'pink', 7: 'brown'}
+        colors = plt.cm.plasma(np.linspace(0, 1, 8))
+        color_map = {i: tuple(colors[i][:3]) for i in range(8)}
         map_true_labels = {label: i for i, label in enumerate(np.unique(true_labels))}
         true_labels = [map_true_labels[label] for label in true_labels]
 
@@ -51,8 +53,8 @@ def display_MLG(MLG, layer_labels, true_labels=None):
 
     fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
     for i, G in enumerate(MLG):
-        nx.draw(G, with_labels=False, node_size=10, edge_color='black', ax=axes[i], **kwargs)
-        axes[i].set_title(f"{layer_labels[i]}")
+        nx.draw(G, with_labels=False, node_size=node_size, edge_color='black', ax=axes[i], **kwargs)
+        #axes[i].set_title(f"{layer_labels[i]}")
 
     plt.show()
 
@@ -61,8 +63,14 @@ def display_MLG(MLG, layer_labels, true_labels=None):
     adjacency_matrices = [nx.adjacency_matrix(G) for G in MLG]
     fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
     for i, adjacency_matrix in enumerate(adjacency_matrices):
-        axes[i].spy(adjacency_matrix, markersize=2, marker="D", color="Blue")
-        axes[i].set_title(f"{layer_labels[i]}")
+        axes[i].spy(adjacency_matrix, markersize=markersize, marker="D", color="Blue")
+        #axes[i].set_title(f"{layer_labels[i]}")
+        axes[i].xaxis.set_tick_params(labelbottom=False) 
+        axes[i].xaxis.set_tick_params(labeltop=False)
+        # axes[i].yaxis.set_tick_params(labelleft=False) 
+       # axes[i].yaxis.set_tick_params(labeltop=False)
+        axes[i].set_xticks([])
+        axes[i].set_yticks([])
     plt.show()
 
 # AUCS Dataset #####################################################
@@ -72,7 +80,7 @@ def init_graph():
     with open(path) as f:
         for line in f:
             line = line.strip().split(',')
-            if line[1] == 'NA':
+            if line[1] == 'NA' or line[1] == 'G8':
                 continue
             else:
                 g.add_node(line[0])
@@ -87,7 +95,7 @@ def get_true_labels():
         for line in f:
             line = line.strip().split(',')
             t = line[1]
-            if t == 'NA':
+            if t == 'NA' or t == 'G8':
                 na_list.append(line[0])
             else:
                 true_labels.append(int(t[-1])-1)
@@ -409,8 +417,8 @@ class Dataset():
         self.layer_labels = layer_labels
         self.labels = labels
         
-    def display(self):
+    def display(self,node_size=50,markersize=10):
         if self.name == "UNINet":
-            display_MLG(self.MLG, self.layer_labels)
+            display_MLG(self.MLG, self.layer_labels, node_size=node_size,markersize=markersize)
         else:
-            display_MLG(self.MLG, self.layer_labels, self.labels)
+            display_MLG(self.MLG, self.layer_labels, self.labels, node_size=node_size,markersize=markersize)
