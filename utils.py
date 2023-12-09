@@ -32,16 +32,17 @@ def spectral_clustering(G, k):
     A = nx.adjacency_matrix(G)
     n = G.number_of_nodes()
     degrees = [G.degree(node) for node in G.nodes()]
-    D_inv = diags([1/d for d in degrees])
+    D = np.diag(degrees)
+    D_inv = np.linalg.pinv(D)
     L_rw = np.eye(n) - D_inv @ A
     eigen_values, eigen_vectors = eigs(L_rw, k=k, which='SR')
     eigen_vectors = eigen_vectors.real
     model = KMeans(n_clusters=k)
     model.fit(eigen_vectors)
-    clustering ={}
-    for i,node in enumerate (G.nodes()) :
-        clustering[node] = model.labels_[i] 
-    return clustering
+    # clustering ={}
+    # for i,node in enumerate (G.nodes()) :
+    #     clustering[node] = model.labels_[i] 
+    return model.labels_
 
 
 

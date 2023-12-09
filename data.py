@@ -33,32 +33,39 @@ def load_UNINet(file_path):
 
     return MLG, layer_labels, node_names
 
-
-def display_MLG(MLG, layer_labels=None, true_labels=None,node_size=2,markersize=2):
-
+def display_MLG(MLG, layer_labels=None, true_labels=None, node_size=2, markersize=2, keep_shape=True):
     M = len(MLG)
 
-
     if true_labels is not None:
-        #color_map = {0: 'red', 1: 'blue', 2: 'green', 3: 'yellow', 4: 'orange', 5: 'purple', 6: 'pink', 7: 'brown'}
-        colors = plt.cm.plasma(np.linspace(0, 1, 8))
-        color_map = {i: tuple(colors[i][:3]) for i in range(8)}
+        k = len(set(true_labels))
+        colors = plt.cm.plasma(np.linspace(0, 1, k))
+        color_map = {i: tuple(colors[i][:3]) for i in range(k)}
         map_true_labels = {label: i for i, label in enumerate(np.unique(true_labels))}
         true_labels = [map_true_labels[label] for label in true_labels]
 
-        node_colors = [color_map[true_labels[i]]  if true_labels[i] < len(color_map) else "black" for i in range(len(true_labels))] 
+        node_colors = [color_map[true_labels[i]] if true_labels[i] < len(color_map) else "black" for i in range(len(true_labels))]
         kwargs = {'node_color': node_colors}
     else:
         kwargs = {}
 
-    fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
-    for i, G in enumerate(MLG):
-        nx.draw(G, with_labels=False, node_size=node_size, edge_color='black', ax=axes[i], **kwargs)
-        if layer_labels is not None:
-            axes[i].set_title(f"{layer_labels[i]}")
+    if keep_shape:
+        pos = nx.spring_layout(MLG[0])
 
-    plt.show()
+        fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
+        for i, G in enumerate(MLG):
+            nx.draw(G, pos=pos, with_labels=False, node_size=node_size, font_weight='bold', edge_color='black', ax=axes[i], **kwargs)
+            if layer_labels is not None:
+                axes[i].set_title(f"{layer_labels[i]}")
 
+        plt.show()
+    else : 
+        fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
+        for i, G in enumerate(MLG):
+            nx.draw(G, with_labels=False, node_size=node_size, font_weight='bold', edge_color='black', ax=axes[i], **kwargs)
+            if layer_labels is not None:
+                axes[i].set_title(f"{layer_labels[i]}")
+
+        plt.show()
 
 
     adjacency_matrices = [nx.adjacency_matrix(G) for G in MLG]
@@ -398,7 +405,7 @@ def load_Cora(preprocess=False, extended=True):
                 nodes_to_keep.append(node)
                 nodes_per_class[label][1] += 1
 
-    true_labels = [true_labels[i] for i in nodes_to_keep]
+        true_labels = [true_labels[i] for i in nodes_to_keep]
 
     MLG = []
     layer_labels = ['authors', 'titles', 'citations']

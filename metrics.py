@@ -11,7 +11,6 @@ def purity_score(clustering_result, ground_truth):
     """
     Calculate purity score for a clustering result.
     """
-
     unique_clusters = np.unique(list(clustering_result.values()))
     N = len(ground_truth)
     correctly_assigned = 0
@@ -29,7 +28,6 @@ def nmi_score(clustering_result, ground_truth):
     """
     Calculate Normalized Mutual Information (NMI) score for a clustering result.
     """
-
     # Ensure the order of labels is consistent
     sorted_keys = sorted(clustering_result.keys())
     true_labels = [ground_truth[data_point] for data_point in sorted_keys]
@@ -38,12 +36,10 @@ def nmi_score(clustering_result, ground_truth):
     return nmi
 
 
-
 def ri_score(clustering_result, ground_truth):
     """
     Calculate Rand Index (RI) for a clustering result.
     """
-    
     num_data_points = len(ground_truth)
     TP = 0
     TN = 0
@@ -67,14 +63,24 @@ def ri_score(clustering_result, ground_truth):
     ri = (TP + TN) / (TP + TN + FP + FN)
     return ri
 
-def compute_confusion_matrix(ground_truth, predicted_clusters, cmap=None):
-    unique_labels = sorted(set(ground_truth.values()) | set(predicted_clusters.values()))
-    ground_truth_labels = [ground_truth[i] for i in range(len(ground_truth))]
-    predicted_labels = [predicted_clusters[i] for i in range(len(predicted_clusters))]
-    conf_matrix = confusion_matrix(ground_truth_labels, predicted_labels, labels=unique_labels)
+
+def compute_confusion_matrix(ground_truth, predicted_clusters, cmap=plt.cm.Blues):
+    """
+    Compute the confusion matrix of a predicted clustering
+    """  
+    true_labels = list(ground_truth.values())
+    pred_labels = list(predicted_clusters.values())
+    unique_labels = sorted(set(true_labels) | set(pred_labels))
+    ground_truth_labels = [true_labels.index(label) for label in true_labels]
+    predicted_labels = [pred_labels.index(label) for label in pred_labels]
+    conf_matrix = confusion_matrix(ground_truth_labels, predicted_labels)
+
     plt.figure(figsize=(8, 6))
     sns.set(font_scale=1.2)
-    sns.heatmap(conf_matrix, annot=True, fmt='g', cmap=cmap, xticklabels=unique_labels, yticklabels=unique_labels)
-    plt.xlabel('Predicted Labels')
-    plt.ylabel('True Labels')
+    sns.heatmap(conf_matrix, annot=True, fmt='g', cmap=cmap, xticklabels=unique_labels, yticklabels=unique_labels, cbar=False)
+    plt.xlabel('Predicted Labels', fontsize=14)
+    plt.ylabel('True Labels', fontsize=14)
+    plt.title('Confusion Matrix', fontsize=16)
+    plt.tick_params(axis='both', which='both', length=0) 
+    plt.tight_layout()
     plt.show()
