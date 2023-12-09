@@ -34,7 +34,7 @@ def load_UNINet(file_path):
     return MLG, layer_labels, node_names
 
 
-def display_MLG(MLG, layer_labels, true_labels=None,node_size=2,markersize=2):
+def display_MLG(MLG, layer_labels=None, true_labels=None,node_size=2,markersize=2):
 
     M = len(MLG)
 
@@ -54,7 +54,8 @@ def display_MLG(MLG, layer_labels, true_labels=None,node_size=2,markersize=2):
     fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
     for i, G in enumerate(MLG):
         nx.draw(G, with_labels=False, node_size=node_size, edge_color='black', ax=axes[i], **kwargs)
-        #axes[i].set_title(f"{layer_labels[i]}")
+        if layer_labels is not None:
+            axes[i].set_title(f"{layer_labels[i]}")
 
     plt.show()
 
@@ -387,6 +388,8 @@ def preprocess_Cora(classes=["Robotics", "NLP", "Data_Mining"]):
 def load_Cora(preprocess=False, extended=True):
     if preprocess:
         preprocess_Cora()
+    true_labels = pd.read_csv('datasets/Cora/labels.txt', header=None, sep=' ')[0].tolist()
+
     if not extended:
         nodes_per_class = {'Robotics': [40, 0], 'NLP': [30, 0], 'Data_Mining': [20, 0]}
         nodes_to_keep = []
@@ -395,6 +398,7 @@ def load_Cora(preprocess=False, extended=True):
                 nodes_to_keep.append(node)
                 nodes_per_class[label][1] += 1
 
+    true_labels = [true_labels[i] for i in nodes_to_keep]
 
     MLG = []
     layer_labels = ['authors', 'titles', 'citations']
@@ -405,7 +409,6 @@ def load_Cora(preprocess=False, extended=True):
         g = nx.from_numpy_array(adj.values)
         MLG.append(g)
 
-    true_labels = pd.read_csv('datasets/Cora/labels.txt', header=None, sep=' ')[0].tolist()
 
     return MLG, layer_labels, true_labels
 
