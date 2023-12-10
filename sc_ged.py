@@ -60,7 +60,7 @@ class SC_GED:
     def _orthogonality(self, P, Q):
         return 0.5 * self.beta * torch.norm(P @ Q - torch.eye(self.n))
 
-    def fit(self, n_iter=10_000):
+    def fit(self, n_iter=40):
         self._joint_eigen_decomposition(n_iter)
 
         self.U = self.P[:, :self.k]
@@ -129,7 +129,10 @@ class SC_GED:
 
     def evaluate(self, true_labels, verbose=False):
         assert self.clustering is not None, "You must fit the model before evaluating it."
-        nodes = sorted(self.clustering.keys(), key=lambda x: int(x[1:]))
+        if isinstance(list(self.clustering.keys())[0], int):
+            nodes = sorted(self.clustering.keys())
+        else:
+            nodes = sorted(self.clustering.keys(), key=lambda x: int(x[1:]))
         clustering = {}
         for i, node in enumerate(nodes):
             clustering[i] = self.clustering[node]

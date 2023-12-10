@@ -85,7 +85,9 @@ def compute_Laplacien(D, W, n, version="rw"):
             return compute_Laplacien(D, W, n, version=version)
         else:
             M = len(D)
-            L = [torch.pinverse(torch.sqrt(D[i])) @ (D[i] - W[i]) @ torch.pinverse(torch.sqrt(D[i])) for i in range(M)]   
+            I_Mn = torch.eye(n).repeat(M, 1, 1)
+            D_sqrt = torch.stack([torch.diag(1/torch.sqrt(diag)) for diag in D])
+            L = I_Mn - torch.einsum('ijk,ikl,ilm->ijm', D_sqrt, W, D_sqrt)
     else:
         raise NotImplementedError("version not supported")
     return L

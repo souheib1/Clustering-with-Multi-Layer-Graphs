@@ -1,7 +1,7 @@
 mlgrad
 mlgrad
 mlgrad
-grad
+mlgrad
 mlgrad
 professor
 mlgrad
@@ -72,7 +72,7 @@ mlstaff
 sloan
 mlstaff
 "1styeargrad "
-sloan_2
+sloan
 mlgrad
 mlgrad
 mlgrad
@@ -87,4 +87,4 @@ mlgrad
 mlgrad
 mlurop
 mlgrad
-grad
+mlgrad
