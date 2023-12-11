@@ -1,10 +1,7 @@
 import networkx as nx
 import numpy as np
 from scipy.sparse.linalg import eigs
-from scipy.sparse import diags, eye
-from random import randint
 from sklearn.cluster import KMeans
-from collections import Counter
 import matplotlib.pyplot as plt
 import torch
 
@@ -120,3 +117,58 @@ def layer_ranks(G):
     l=[]
     #to be implemented
     return l
+
+def get_metric_values(metric, results, dict_layer_dataset=None): 
+    values = np.zeros(6)
+    values[::2] = results.loc[:, ('SC_GED', metric)]
+    for i, (dataset_name, model_name) in enumerate(dict_layer_dataset.items()):
+        values[2*i+1] = results.loc[dataset_name, (model_name, metric)]
+    values = np.round(values, 2)
+    return values
+
+def dispaly_results(results, dict_layer_dataset=None):
+    if dict_layer_dataset is None:
+        dict_layer_dataset = {
+        'Cora':"Layer1",
+        'AUCS':"Layer0",
+        'MIT':"Layer2"
+        } 
+    metrics = ['purity', 'nmi', 'ri']
+    for metric in metrics:
+        values = get_metric_values(metric, results, dict_layer_dataset)
+        plt.rcParams["figure.figsize"] = (8,5)
+
+        datasets = ("Cora", "AUCS", "MIT")
+        purity_results = {
+            "Single-Layer Eigen-Decomposition ": values[1::2],
+            "Generalized Eigen-Decomposition": values[::2],
+        } 
+
+
+        x = np.arange(len(datasets))  # the label locations
+        width = 0.25  # the width of the bars
+        multiplier = 0
+
+        fig, ax = plt.subplots(layout='constrained')
+
+        for attribute, measurement in purity_results.items():
+            offset = width * multiplier
+            rects = ax.bar(x + offset, measurement, width, label=attribute)
+
+            ax.bar_label(rects, padding=3)
+            multiplier += 1
+        
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_ylabel(f'{metric.capitalize()} Score', fontsize=16)
+        ax.set_xticks(x + width, datasets)
+        # put legend on the right with 1 row for each attribute outside the plot
+        ax.legend(loc='upper left', ncols=1, fontsize=16, bbox_to_anchor=(0, 1.3))
+        ax.set_ylim(0, 1)
+
+        plt.show()
+
+
+def evaluation_pipeline(dataset, model):
+    model.fit()
+    purity, nmi, ri = model.evaluate(dataset.labels, verbose=False)
+    return purity, nmi, ri
