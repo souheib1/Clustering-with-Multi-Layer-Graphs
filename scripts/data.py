@@ -1,7 +1,11 @@
+import sys
+sys.path.append('../datasets/')
+
 import numpy as np
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+
 
 FIG_SIZE = 5
 
@@ -83,7 +87,7 @@ def display_MLG(MLG, layer_labels=None, true_labels=None, node_size=2, markersiz
 
 # AUCS Dataset #####################################################
 def init_graph():
-    path = './datasets/AUCS/aucs_nodelist.txt'
+    path = '../datasets/AUCS/aucs_nodelist.txt'
     g = nx.Graph()
     with open(path) as f:
         for line in f:
@@ -98,7 +102,7 @@ def init_graph():
 def get_true_labels():
     true_labels = []
     na_list = []
-    path = './datasets/AUCS/aucs_nodelist.txt'
+    path = '../datasets/AUCS/aucs_nodelist.txt'
     with open(path) as f:
         for line in f:
             line = line.strip().split(',')
@@ -111,7 +115,7 @@ def get_true_labels():
 
 
 def load_AUCS():
-    path = './datasets/AUCS/aucs_edgelist.txt'
+    path = '../datasets/AUCS/aucs_edgelist.txt'
 
     # Declare each layer's graph
     lunch = init_graph()
@@ -148,7 +152,7 @@ def load_AUCS():
     
 
 def extract_friendship_graph():
-    df = pd.read_csv('datasets/MIT/reality-mining-survey.txt', sep='\t')
+    df = pd.read_csv('../datasets/MIT/reality-mining-survey.txt', sep='\t')
     # start with 94 nodes from 0 to 89
     g = nx.Graph()
     g.add_nodes_from(range(90))
@@ -156,7 +160,7 @@ def extract_friendship_graph():
     return g
 
 def extract_proximity_graph():
-    df = pd.read_csv('datasets/MIT/reality-mining-proximity.txt', sep='\t')
+    df = pd.read_csv('../datasets/MIT/reality-mining-proximity.txt', sep='\t')
     df['start'] = pd.to_datetime(df['start'], format='mixed')
     df['end'] = pd.to_datetime(df['end'], format='mixed')
 
@@ -177,7 +181,7 @@ def extract_proximity_graph():
     return g
 
 def extract_calls_graph():
-    df = pd.read_csv('datasets/MIT/reality-mining-calls.txt', sep='\t')
+    df = pd.read_csv('../datasets/MIT/reality-mining-calls.txt', sep='\t')
     df = df[df.subjectId != df.otherPartyId]
     incoming_mask = df['direction'] == 'Incoming'
     df.loc[incoming_mask, ['subjectId', 'otherPartyId']] = df.loc[incoming_mask, ['otherPartyId', 'subjectId']].values
@@ -205,7 +209,7 @@ def extract_calls_graph():
     return g
 
 def extract_affiliation():
-    affiliation = pd.read_csv('datasets/MIT/reality-mining-labels.txt', header=None)[0].tolist()
+    affiliation = pd.read_csv('../datasets/MIT/reality-mining-labels.txt', header=None)[0].tolist()
     correct_affiliation = {"sloan_2": "sloan", "grad": "mlgrad"}
     affiliation = [correct_affiliation[a] if a in correct_affiliation.keys() else a for a in affiliation]
     return affiliation
@@ -213,19 +217,19 @@ def extract_affiliation():
 def preprocess_MIT():
     friendship = extract_friendship_graph()
     friendship_adj = pd.DataFrame(nx.adjacency_matrix(friendship).todense(), dtype=int)
-    friendship_adj.to_csv("datasets/MIT/friendship.txt", header=None, index=None, sep=' ')
+    friendship_adj.to_csv("../datasets/MIT/friendship.txt", header=None, index=None, sep=' ')
 
     calls = extract_calls_graph()
     calls_adj = pd.DataFrame(nx.adjacency_matrix(calls).todense(), dtype=int)
-    calls_adj.to_csv("datasets/MIT/calls.txt", header=None, index=None, sep=' ')
+    calls_adj.to_csv("../datasets/MIT/calls.txt", header=None, index=None, sep=' ')
 
     proximity = extract_proximity_graph()
     proximity_adj = pd.DataFrame(nx.adjacency_matrix(proximity).todense(), dtype=int)
-    proximity_adj.to_csv("datasets/MIT/proximity.txt", header=None, index=None, sep=' ')
+    proximity_adj.to_csv("../datasets/MIT/proximity.txt", header=None, index=None, sep=' ')
 
     affiliation = extract_affiliation()
     affiliation = pd.DataFrame(affiliation)
-    affiliation.to_csv("datasets/MIT/affiliation.txt", header=None, index=None, sep=' ')
+    affiliation.to_csv("../datasets/MIT/affiliation.txt", header=None, index=None, sep=' ')
 
 
 def load_MIT(preprocess=False):
@@ -234,11 +238,11 @@ def load_MIT(preprocess=False):
     MLG = []
     layer_labels = ['friendship', 'calls', 'proximity']
     for layer in layer_labels:
-        adj = pd.read_csv(f'datasets/MIT/{layer}.txt', header=None, sep=' ')
+        adj = pd.read_csv(f'../datasets/MIT/{layer}.txt', header=None, sep=' ')
         g = nx.from_numpy_array(adj.values)
         MLG.append(g)
 
-    true_labels = pd.read_csv('datasets/MIT/affiliation.txt', header=None, sep=' ')[0].tolist()
+    true_labels = pd.read_csv('../datasets/MIT/affiliation.txt', header=None, sep=' ')[0].tolist()
 
     return MLG, layer_labels, true_labels
 
@@ -285,7 +289,7 @@ def compute_titles_similarity(papers):
     return cosine_sim, paper_index_to_id
 
 def extract_paper_info():
-    with open("datasets/Cora/citations.withauthors") as f:
+    with open("../datasets/Cora/citations.withauthors") as f:
         lines = f.readlines()
 
     lines = [line.strip() for line in lines]
@@ -304,7 +308,7 @@ def extract_paper_info():
             "authors" : lines[authors_start_indices[i]+1:paper_start_indices[i+1]]
         }
 
-    with open("datasets/Cora/papers") as f:
+    with open("../datasets/Cora/papers") as f:
         for line in f:
             if len(line.strip().split("\t")) <= 2:
                 continue
@@ -331,13 +335,13 @@ def preprocess_authors(papers):
             author_vectors[i, author_to_index[author]] = 1
     cosine_sim = cosine_similarity(author_vectors)
     np.fill_diagonal(cosine_sim, 0)
-    pd.DataFrame(cosine_sim).to_csv("datasets/Cora/authors.txt", header=None, index=None, sep=' ')
+    pd.DataFrame(cosine_sim).to_csv("../datasets/Cora/authors.txt", header=None, index=None, sep=' ')
     
 
 
 def preprocess_titles(papers):
     cosine_sim, _ = compute_titles_similarity(papers)
-    pd.DataFrame(cosine_sim).to_csv("datasets/Cora/titles.txt", header=None, index=None, sep=' ')    
+    pd.DataFrame(cosine_sim).to_csv("../datasets/Cora/titles.txt", header=None, index=None, sep=' ')    
 
 def preprocess_citations(papers, paper_id_to_index):
     citation = nx.Graph()
@@ -350,11 +354,11 @@ def preprocess_citations(papers, paper_id_to_index):
                     citation.add_edge(paper_id_to_index[paper_id], paper_id_to_index[cited_id])
 
     adjacency_matrix = nx.adjacency_matrix(citation)
-    pd.DataFrame(adjacency_matrix.todense()).to_csv("datasets/Cora/citations.txt", header=None, index=None, sep=' ')
+    pd.DataFrame(adjacency_matrix.todense()).to_csv("../datasets/Cora/citations.txt", header=None, index=None, sep=' ')
     
 def preprocess_labels(papers, paper_index_to_id):
     labels = [papers[paper_index_to_id[i]]["label"] for i in range(len(papers))]
-    pd.DataFrame(labels).to_csv("datasets/Cora/labels.txt", header=None, index=None, sep=' ')
+    pd.DataFrame(labels).to_csv("../datasets/Cora/labels.txt", header=None, index=None, sep=' ')
 
 def preprocess_Cora(classes=["Robotics", "NLP", "Data_Mining"]):
     papers = extract_paper_info()
@@ -395,7 +399,7 @@ def preprocess_Cora(classes=["Robotics", "NLP", "Data_Mining"]):
 def load_Cora(preprocess=False, extended=True):
     if preprocess:
         preprocess_Cora()
-    true_labels = pd.read_csv('datasets/Cora/labels.txt', header=None, sep=' ')[0].tolist()
+    true_labels = pd.read_csv('../datasets/Cora/labels.txt', header=None, sep=' ')[0].tolist()
 
     if not extended:
         nodes_per_class = {'Robotics': [40, 0], 'NLP': [30, 0], 'Data_Mining': [20, 0]}
@@ -410,7 +414,7 @@ def load_Cora(preprocess=False, extended=True):
     MLG = []
     layer_labels = ['authors', 'titles', 'citations']
     for layer in layer_labels:
-        adj = pd.read_csv(f'datasets/Cora/{layer}.txt', header=None, sep=' ')
+        adj = pd.read_csv(f'../datasets/Cora/{layer}.txt', header=None, sep=' ')
         if not extended:
             adj = adj.iloc[nodes_to_keep, nodes_to_keep]
         g = nx.from_numpy_array(adj.values)

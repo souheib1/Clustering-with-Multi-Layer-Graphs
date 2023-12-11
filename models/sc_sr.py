@@ -1,9 +1,8 @@
+import sys
+sys.path.append("../scripts")
 import networkx as nx
 from sklearn.cluster import KMeans
-from tqdm import tqdm
 import torch
-import torch.optim as optim
-import matplotlib.pyplot as plt
 
 from utils import compute_adjacency_matrix,compute_degree_matrix_from_adjMatrix
 
@@ -59,6 +58,6 @@ def SC_SR(W, k, _lambda,ranking):
   
 
     # 7) Cluster yi in Rk into C1,..,Ck using the K-means algorithm
-    kmeans = KMeans(n_clusters=k, random_state=0).fit(U.detach().numpy())
+    kmeans = KMeans(n_clusters=k, random_state=0, n_init=10).fit(U.detach().numpy())
     return kmeans.labels_
 

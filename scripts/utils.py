@@ -32,9 +32,9 @@ def spectral_clustering(G, k):
     D = np.diag(degrees)
     D_inv = np.linalg.pinv(D)
     L_rw = np.eye(n) - D_inv @ A
-    eigen_values, eigen_vectors = eigs(L_rw, k=k, which='SR')
+    _, eigen_vectors = eigs(L_rw, k=k, which='SR')
     eigen_vectors = eigen_vectors.real
-    model = KMeans(n_clusters=k)
+    model = KMeans(n_clusters=k, random_state=0, n_init=10)
     model.fit(eigen_vectors)
     # clustering ={}
     # for i,node in enumerate (G.nodes()) :

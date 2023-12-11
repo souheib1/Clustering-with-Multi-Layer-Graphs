@@ -1,4 +1,6 @@
-import networkx as nx
+import sys
+sys.path.append("../scripts")
+
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 import torch
@@ -6,7 +8,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from metrics import purity_score, nmi_score, ri_score
 from utils import compute_adjacency_matrix, compute_degree_matrix,compute_Laplacien
-import numpy as np
+
 class SC_GED:
     """
     Spectral Clustering with Generalized Eigen-Decomposition (SC-GED).

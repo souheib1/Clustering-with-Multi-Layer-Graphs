@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../scripts")
+
 from sklearn.cluster import KMeans
 import torch
 

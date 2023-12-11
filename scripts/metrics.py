@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import normalized_mutual_info_score, adjusted_rand_score
+from sklearn.metrics import normalized_mutual_info_score
 from itertools import combinations
 from collections import Counter
 #import seaborn as sns

@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../scripts")
+
 from sklearn.cluster import KMeans
 import torch
 from metrics import purity_score, nmi_score, ri_score
