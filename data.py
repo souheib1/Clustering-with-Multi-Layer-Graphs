@@ -51,11 +51,11 @@ def display_MLG(MLG, layer_labels=None, true_labels=None, node_size=2, markersiz
     if keep_shape:
         pos = nx.spring_layout(MLG[0])
 
-        fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
+        fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, 1.2*FIG_SIZE))
         for i, G in enumerate(MLG):
-            nx.draw(G, pos=pos, with_labels=False, node_size=node_size, font_weight='bold', edge_color='black', ax=axes[i], **kwargs)
+            nx.draw(G, pos=pos, with_labels=False, node_size=node_size, font_weight='bold', edge_color='black',width=0.2, ax=axes[i], **kwargs)
             if layer_labels is not None:
-                axes[i].set_title(f"{layer_labels[i]}")
+                axes[i].set_title(f"{layer_labels[i]}", fontsize=20)
 
         plt.show()
     else : 
@@ -72,7 +72,7 @@ def display_MLG(MLG, layer_labels=None, true_labels=None, node_size=2, markersiz
     fig, axes = plt.subplots(1, M, figsize=(FIG_SIZE * M, FIG_SIZE))
     for i, adjacency_matrix in enumerate(adjacency_matrices):
         axes[i].spy(adjacency_matrix, markersize=markersize, marker="D", color="Blue")
-        #axes[i].set_title(f"{layer_labels[i]}")
+        axes[i].set_title(f"{layer_labels[i]}",fontsize=20)
         axes[i].xaxis.set_tick_params(labelbottom=False) 
         axes[i].xaxis.set_tick_params(labeltop=False)
         # axes[i].yaxis.set_tick_params(labelleft=False) 
