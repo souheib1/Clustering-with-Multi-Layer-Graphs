@@ -1,3 +1,6 @@
 # Clustering-with-Multi-Layer-Graphs
 MVA Project : Geometric Data Analysis
-![Capture](https://github.com/souheib1/Clustering-with-Multi-Layer-Graphs/assets/73786465/a44a2bd2-c288-46ed-ac02-010206110c7a)
+
+
+
+![titleV2](https://github.com/souheib1/Clustering-with-Multi-Layer-Graphs/assets/73786465/d62847d2-81a9-4aad-b103-7b8232e5b00e)
